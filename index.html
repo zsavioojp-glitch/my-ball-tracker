@@ -3,23 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ball Tracker Cloud Pro (Fixed)</title>
+    <title>Ball Tracker Cloud v4 (With Delete)</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #2563eb; --success: #22c55e; --danger: #ef4444; --slate: #64748b; }
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+        :root { --primary: #2563eb; --success: #22c55e; --danger: #ef4444; --slate: #64748b; --bg: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: #1e293b; margin: 0; padding: 20px; font-weight: 400; }
         .container { max-width: 500px; margin: 0 auto; padding-bottom: 80px; }
         .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px; border: 1px solid #e2e8f0; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+        h2 { font-size: 0.95rem; font-weight: 600; margin: 0 0 15px 0; color: #334155; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .stat-box { background: #f1f5f9; padding: 12px; border-radius: 12px; text-align: center; }
-        .stat-val { display: block; font-size: 1.25rem; font-weight: 600; }
-        .stat-lbl { font-size: 0.75rem; color: var(--slate); }
-        input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 0.9rem; margin-top: 5px; }
-        .match-item { padding: 15px; border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 10px; background: #fff; border: 1px solid #e2e8f0; }
+        .stat-val { display: block; font-size: 1.25rem; font-weight: 600; margin-bottom: 2px; }
+        .stat-lbl { font-size: 0.75rem; color: var(--slate); font-weight: 500; }
+        input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 0.9rem; margin-top: 5px; color: #1e293b; font-family: inherit; }
+        .match-item { padding: 15px; border-radius: 12px; margin-bottom: 10px; background: #fff; border: 1px solid #e2e8f0; position: relative; }
         .btn-group { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 10px; }
-        button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 4px; font-size: 0.7rem; font-weight: 600; transition: 0.2s; }
+        button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 2px; font-size: 0.7rem; font-weight: 500; transition: 0.2s; font-family: inherit; }
         .btn-st { background: #f1f5f9; color: var(--slate); }
         .btn-st.active[data-v="win"] { background: var(--success); color: white; }
         .btn-st.active[data-v="winHalf"] { background: #86efac; color: #064e3b; }
@@ -27,12 +28,14 @@
         .btn-st.active[data-v="loss"] { background: var(--danger); color: white; }
         .btn-st.active[data-v="lossHalf"] { background: #fca5a5; color: #7f1d1d; }
         .btn-save { background: var(--primary); color: white; width: 100%; padding: 16px; font-size: 1rem; font-weight: 600; border-radius: 12px; margin-top: 10px; }
-        .btn-add { background: #1e293b; color: white; width: 100%; padding: 12px; border-radius: 10px; margin-top: 10px; }
+        .btn-add { background: #1e293b; color: white; width: 100%; padding: 12px; border-radius: 10px; margin: 10px 0; font-weight: 500; }
         .tab-bar { display: flex; background: #e2e8f0; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
-        .tab { flex: 1; padding: 10px; text-align: center; border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--slate); }
-        .tab.active { background: white; color: var(--primary); }
-        .history-item { border-bottom: 1px solid #f1f5f9; padding: 15px 0; }
-        .history-detail { font-size: 0.8rem; background: #f8fafc; padding: 10px; border-radius: 8px; margin-top: 5px; }
+        .tab { flex: 1; padding: 10px; text-align: center; border-radius: 8px; font-size: 0.85rem; font-weight: 500; color: var(--slate); }
+        .tab.active { background: white; color: var(--primary); font-weight: 600; }
+        .history-item { border-bottom: 1px solid #f1f5f9; padding: 15px 0; position: relative; }
+        .history-detail { font-size: 0.8rem; background: #f8fafc; padding: 10px; border-radius: 8px; margin-top: 8px; color: #64748b; line-height: 1.6; }
+        .btn-del-day { background: #fee2e2; color: #ef4444; padding: 5px 10px; font-size: 0.65rem; border-radius: 6px; font-weight: 600; }
+        .summary-card { padding: 15px; border-radius: 12px; background: #fff; border: 1px solid #e2e8f0; margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -51,11 +54,10 @@
                 <div class="stat-box"><span class="stat-val" id="total-pf">0</span><span class="stat-lbl">กำไรรวม</span></div>
             </div>
         </div>
-
         <div class="card">
-            <h2>📅 ข้อมูลวันนี้</h2>
+            <h2>📅 บันทึกข้อมูล</h2>
             <input type="date" id="m-date">
-            <input type="number" id="m-stake" value="200" placeholder="ยอดลงทุนต่อคู่">
+            <input type="number" id="m-stake" value="200" placeholder="ลงทุนต่อคู่">
             <div id="m-list" style="margin-top:15px"></div>
             <button class="btn-add" onclick="addMatch()">+ เพิ่มคู่บอล</button>
             <button class="btn-save" onclick="saveToCloud()" id="btn-save-text">💾 บันทึกขึ้น Cloud</button>
@@ -63,11 +65,14 @@
     </div>
 
     <div id="page-his" style="display:none">
-        <div class="card" id="history-content">กำลังโหลดข้อมูล...</div>
+        <div class="card" id="history-content"></div>
     </div>
 
     <div id="page-sum" style="display:none">
-        <div class="card" id="summary-content"></div>
+        <div class="card">
+            <h2>📊 สรุปช่วงเวลา</h2>
+            <div id="summary-content"></div>
+        </div>
     </div>
 </div>
 
@@ -90,40 +95,45 @@
     document.getElementById('m-date').valueAsDate = new Date();
 
     async function init() {
-        try {
-            const doc = await docRef.get();
-            if (doc.exists) {
-                history = doc.data().history || {};
-                updateGlobalStats();
-                loadDateData();
-            }
-        } catch (e) { console.error(e); }
+        const doc = await docRef.get();
+        if (doc.exists) {
+            history = doc.data().history || {};
+            updateGlobalStats();
+            loadDateData();
+        }
     }
 
-    function addMatch(name = '', status = '') {
-        matches.push({ id: Date.now(), name, status });
+    function addMatch() {
+        matches.push({ id: Date.now(), name: '', status: '' });
         renderMatches();
     }
 
-    // แก้ไข: ไม่ต้อง renderMatches ใหม่ขณะพิมพ์ชื่อทีม เพื่อไม่ให้เด้ง
     function renderMatches() {
         const list = document.getElementById('m-list');
         list.innerHTML = '';
-        matches.forEach(m => {
+        matches.forEach((m, idx) => {
             const div = document.createElement('div');
             div.className = 'match-item';
             div.innerHTML = `
-                <input type="text" placeholder="ชื่อคู่บอล" value="${m.name}" onchange="updateMatchData(${m.id}, 'name', this.value)">
+                <div style="display:flex; gap:8px">
+                    <input type="text" placeholder="ชื่อคู่บอล" value="${m.name}" onchange="updateMatchData(${m.id}, 'name', this.value)" style="flex:1">
+                    <button onclick="removeMatch(${idx})" style="background:#fee2e2; color:#ef4444; width:40px; border-radius:10px; font-size:1rem; margin-top:5px">×</button>
+                </div>
                 <div class="btn-group">
                     ${['win','winHalf','draw','loss','lossHalf'].map(v => `
                         <button class="btn-st ${m.status===v?'active':''}" data-v="${v}" onclick="updateMatchStatus(${m.id},'${v}')">
-                            ${v==='win'?'ชนะ':v==='winHalf'?'ชนะครึ่ง':v==='draw'?'เสมอ':v==='loss'?'แพ้':'แพ้ครึ่ง'}
+                            ${v==='win'?'ชนะ':v==='winHalf'?'ชนะ':v==='draw'?'เสมอ':v==='loss'?'แพ้':'แพ้'}
                         </button>
                     `).join('')}
                 </div>
             `;
             list.appendChild(div);
         });
+    }
+
+    function removeMatch(idx) {
+        matches.splice(idx, 1);
+        renderMatches();
     }
 
     function updateMatchData(id, key, val) {
@@ -134,126 +144,118 @@
     function updateMatchStatus(id, status) {
         const m = matches.find(i => i.id === id);
         if(m) m.status = status;
-        renderMatches(); // อัปเดตสีปุ่ม
+        renderMatches();
     }
 
     async function saveToCloud() {
         const date = document.getElementById('m-date').value;
         const stake = document.getElementById('m-stake').value;
         const btn = document.getElementById('btn-save-text');
-        
         history[date] = { stake, matches };
         btn.innerText = "⏳ กำลังบันทึก...";
-        btn.disabled = true;
-
-        try {
-            await docRef.set({ history });
-            btn.innerText = "✅ สำเร็จ!";
-            updateGlobalStats();
-            setTimeout(() => { 
-                btn.innerText = "💾 บันทึกขึ้น Cloud"; 
-                btn.disabled = false;
-            }, 2000);
-        } catch (e) {
-            alert("บันทึกไม่สำเร็จ ตรวจสอบเน็ตหรือ Rules ใน Firebase");
-            btn.disabled = false;
-        }
+        await docRef.set({ history });
+        btn.innerText = "✅ บันทึกสำเร็จ!";
+        updateGlobalStats();
+        setTimeout(() => { btn.innerText = "💾 บันทึกขึ้น Cloud"; }, 2000);
     }
 
     function loadDateData() {
         const date = document.getElementById('m-date').value;
-        if(history[date]) {
-            matches = JSON.parse(JSON.stringify(history[date].matches)); // Deep copy
-            document.getElementById('m-stake').value = history[date].stake;
-        } else {
-            matches = [];
-        }
+        matches = history[date] ? JSON.parse(JSON.stringify(history[date].matches)) : [];
+        if(history[date]) document.getElementById('m-stake').value = history[date].stake;
         renderMatches();
     }
 
     document.getElementById('m-date').onchange = loadDateData;
 
     function calc(mList, stake) {
-        let p = 0, w = 0, lossCount = 0;
-        const s = parseFloat(stake);
+        let p = 0, w = 0, total = 0;
+        const s = parseFloat(stake) || 0;
         mList.forEach(m => {
-            if(m.status==='win'){p+=s*0.8; w++;}
-            else if(m.status==='winHalf'){p+=s*0.4; w++;}
-            else if(m.status==='loss'){p-=s; lossCount++;}
-            else if(m.status==='lossHalf'){p-=s/2; lossCount++;}
+            if(!m.status) return;
+            total++;
+            if(m.status==='win'){ p += s*0.8; w++; }
+            else if(m.status==='winHalf'){ p += s*0.4; w++; }
+            else if(m.status==='loss'){ p -= s; }
+            else if(m.status==='lossHalf'){ p -= s/2; }
         });
-        return { p, w, total: mList.length };
+        return { p, w, total };
     }
 
     function updateGlobalStats() {
-        let totalP = 0, totalW = 0, totalM = 0;
+        let tp = 0, tw = 0, tm = 0;
         Object.values(history).forEach(d => {
-            const res = calc(d.matches, d.stake);
-            totalP += res.p; totalW += res.w; totalM += res.total;
+            const r = calc(d.matches, d.stake);
+            tp += r.p; tw += r.w; tm += r.total;
         });
-        document.getElementById('total-pf').innerText = totalP.toLocaleString();
-        document.getElementById('total-wr').innerText = totalM ? ((totalW/totalM)*100).toFixed(1)+'%' : '0%';
+        document.getElementById('total-pf').innerText = Math.round(tp).toLocaleString();
+        document.getElementById('total-wr').innerText = tm ? ((tw/tm)*100).toFixed(1)+'%' : '0%';
     }
 
     function switchTab(t) {
-        document.getElementById('page-rec').style.display = t==='rec'?'block':'none';
-        document.getElementById('page-his').style.display = t==='his'?'block':'none';
-        document.getElementById('page-sum').style.display = t==='sum'?'block':'none';
-        
-        document.querySelectorAll('.tab').forEach((el, i) => {
-            el.classList.toggle('active', ['rec','his','sum'][i]===t);
-        });
-
+        ['rec','his','sum'].forEach(p => document.getElementById('page-'+p).style.display = p===t?'block':'none');
+        document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', ['rec','his','sum'][i]===t));
         if(t==='his') renderHistory();
         if(t==='sum') renderSummary();
     }
 
+    async function deleteDay(date) {
+        if(confirm(`คุณแน่ใจนะว่าจะลบข้อมูลวันที่ ${date}?`)) {
+            delete history[date];
+            await docRef.set({ history });
+            renderHistory();
+            updateGlobalStats();
+        }
+    }
+
     function renderHistory() {
         const cont = document.getElementById('history-content');
-        cont.innerHTML = '<h2>📜 ประวัติย้อนหลัง</h2>';
-        const sortedDates = Object.keys(history).sort().reverse();
-        
-        if(sortedDates.length === 0) { cont.innerHTML += "ไม่มีข้อมูล"; return; }
+        cont.innerHTML = '<h2>📜 รายการย้อนหลัง</h2>';
+        const dates = Object.keys(history).sort().reverse();
+        if(!dates.length) { cont.innerHTML += '<p style="text-align:center; color:#94a3b8">ไม่มีข้อมูล</p>'; return; }
 
-        sortedDates.forEach(d => {
-            const res = calc(history[d].matches, history[d].stake);
-            let matchDetails = history[d].matches.map(m => 
-                `• ${m.name || 'ไม่ระบุชื่อ'}: ${getStatusName(m.status)}`
-            ).join('<br>');
-
-            cont.innerHTML += `
-                <div class="history-item">
-                    <div style="display:flex; justify-content:space-between; font-weight:600">
-                        <span>📅 ${d}</span>
-                        <span style="color:${res.p>=0?'var(--success)':'var(--danger)'}">${res.p.toLocaleString()}</span>
-                    </div>
-                    <div class="history-detail">${matchDetails || 'ไม่มีรายการ'}</div>
-                </div>`;
+        dates.forEach(d => {
+            const r = calc(history[d].matches, history[d].stake);
+            const detail = history[d].matches.map(m => `• ${m.name || 'ไม่ระบุชื่อ'}: ${getLabel(m.status)}`).join('<br>');
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center">
+                    <span style="font-weight:600; font-size:0.9rem">📅 ${d}</span>
+                    <button class="btn-del-day" onclick="deleteDay('${d}')">ลบข้อมูล</button>
+                </div>
+                <div style="color:${r.p>=0?'var(--success)':'var(--danger)'}; font-weight:600; font-size:0.85rem; margin-top:4px">
+                    ${r.p > 0 ? '+':''}${Math.round(r.p).toLocaleString()} บาท
+                </div>
+                <div class="history-detail">${detail || 'ไม่มีรายการ'}</div>
+            `;
+            cont.appendChild(div);
         });
     }
 
-    function getStatusName(s) {
-        const names = {win:'ชนะ', winHalf:'ชนะครึ่ง', draw:'เสมอ', loss:'แพ้', lossHalf:'แพ้ครึ่ง'};
-        return names[s] || '-';
+    function getLabel(s) {
+        return {win:'ชนะ', winHalf:'ชนะครึ่ง', draw:'เสมอ', loss:'แพ้', lossHalf:'แพ้ครึ่ง'}[s] || '-';
     }
 
     function renderSummary() {
         const cont = document.getElementById('summary-content');
-        cont.innerHTML = '<h2>📊 สรุปช่วงเวลา</h2>';
+        cont.innerHTML = '';
         [3, 7, 15, 30].forEach(days => {
             let p = 0, w = 0, m = 0;
-            const limit = new Date(); limit.setDate(limit.getDate() - days);
+            const cut = new Date(); cut.setDate(cut.getDate() - days);
             Object.keys(history).forEach(d => {
-                if(new Date(d) >= limit) {
-                    const res = calc(history[d].matches, history[d].stake);
-                    p += res.p; w += res.w; m += res.total;
+                if(new Date(d) >= cut) {
+                    const r = calc(history[d].matches, history[d].stake);
+                    p += r.p; w += r.w; m += r.total;
                 }
             });
             cont.innerHTML += `
-                <div class="stat-box" style="margin-bottom:12px; background:#fff; border:1px solid #e2e8f0">
-                    <div class="stat-lbl">ย้อนหลัง ${days} วัน</div>
-                    <div class="stat-val" style="color:${p>=0?'var(--success)':'var(--danger)'}">${p.toLocaleString()}</div>
-                    <div class="stat-lbl">วินเรท: ${m?((w/m)*100).toFixed(1):0}% (${m} คู่)</div>
+                <div class="summary-card">
+                    <div style="font-size:0.75rem; color:var(--slate); font-weight:500">ย้อนหลัง ${days} วัน</div>
+                    <div style="font-size:1.2rem; font-weight:600; color:${p>=0?'var(--success)':'var(--danger)'}">
+                        ${p > 0 ? '+':''}${Math.round(p).toLocaleString()}
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--slate)">วินเรท: ${m?((w/m)*100).toFixed(1):0}% (${m} คู่)</div>
                 </div>`;
         });
     }
