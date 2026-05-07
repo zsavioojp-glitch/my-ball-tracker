@@ -174,8 +174,8 @@
         mList.forEach(m => {
             if(!m.status) return;
             total++;
-            if(m.status==='win'){ p += s*0.8; w++; }
-            else if(m.status==='winHalf'){ p += s*0.4; w++; }
+            if(m.status==='win'){ p += s*1.0; w++; }
+            else if(m.status==='winHalf'){ p += s*0.5; w++; }
             else if(m.status==='loss'){ p -= s; }
             else if(m.status==='lossHalf'){ p -= s/2; }
         });
