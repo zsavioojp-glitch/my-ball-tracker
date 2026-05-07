@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BALL TRACKER PRO - Cloud</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap');
+        
+        body { 
+            font-family: 'Kanit', sans-serif; 
+            background-color: #f8fafc;
+            color: #334155;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .active-tab { 
+            position: relative; 
+            color: #2563eb; 
+            font-weight: 500;
+        }
+        .active-tab::after { 
+            content: ''; 
+            position: absolute; 
+            bottom: -2px; 
+            left: 20%; 
+            width: 60%; 
+            height: 3px; 
+            background: #2563eb; 
+            border-radius: 10px; 
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        input, button {
+            transition: all 0.2s ease;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const STATUS_TYPES = {
+            WIN: 'win',
+            WIN_HALF: 'winHalf',
+            DRAW: 'draw',
+            LOSS: 'loss',
+            LOSS_HALF: 'lossHalf'
+        };
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('record');
+            const [history, setHistory] = useState({});
+            const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+            const [baseStake, setBaseStake] = useState(200);
+            const [matches, setMatches] = useState([]);
+            const [expandedDate, setExpandedDate] = useState(null);
+
+            // โหลดข้อมูลจาก LocalStorage
+            useEffect(() => {
+                const saved = localStorage.getItem('ball_tracker_pro_v4');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    setHistory(parsed);
+                    if (parsed[currentDate]) {
+                        setMatches(parsed[currentDate].matches || []);
+                        setBaseStake(parsed[currentDate].stake || 200);
+                    }
+                }
+            }, [currentDate]);
+
+            const calculateStats = (matchesList, stake) => {
+                let profit = 0;
+                let wins = 0;
+                let countableMatches = 0;
+
+                matchesList.forEach(m => {
+                    const s = parseFloat(stake);
+                    if (!m.status) return;
+                    
+                    countableMatches++;
+                    if (m.status === STATUS_TYPES.WIN) { profit += (s * 0.8); wins++; }
+                    else if (m.status === STATUS_TYPES.WIN_HALF) { profit += (s * 0.4); wins++; }
+                    else if (m.status === STATUS_TYPES.DRAW) { profit += 0; }
+                    else if (m.status === STATUS_TYPES.LOSS) { profit -= s; }
+                    else if (m.status === STATUS_TYPES.LOSS_HALF) { profit -= (s / 2); }
+                });
+
+                const wr = countableMatches > 0 ? (wins / countableMatches) * 100 : 0;
+                return { profit, wr, count: countableMatches };
+            };
+
+            const getPeriodStats = (days) => {
+                const now = new Date();
+                let totalProfit = 0;
+                let totalWins = 0;
+                let totalCountable = 0;
+
+                Object.keys(history).forEach(dateStr => {
+                    const recordDate = new Date(dateStr);
+                    const diffTime = Math.abs(now - recordDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays <= days) {
+                        const day = history[dateStr];
+                        const stake = parseFloat(day.stake);
+                        day.matches.forEach(m => {
+                            if (!m.status) return;
+                            totalCountable++;
+                            if (m.status === STATUS_TYPES.WIN) { totalProfit += (stake * 0.8); totalWins++; }
+                            else if (m.status === STATUS_TYPES.WIN_HALF) { totalProfit += (stake * 0.4); totalWins++; }
+                            else if (m.status === STATUS_TYPES.DRAW) { totalProfit += 0; }
+                            else if (m.status === STATUS_TYPES.LOSS) { totalProfit -= stake; }
+                            else if (m.status === STATUS_TYPES.LOSS_HALF) { totalProfit -= (stake / 2); }
+                        });
+                    }
+                });
+
+                const wr = totalCountable > 0 ? (totalWins / totalCountable) * 100 : 0;
+                return { profit: totalProfit, wr, count: totalCountable };
+            };
+
+            const saveToLocal = () => {
+                if (matches.length === 0) return alert("กรุณาเพิ่มคู่บอลก่อนบันทึก");
+                const newHistory = { ...history, [currentDate]: { stake: baseStake, matches } };
+                setHistory(newHistory);
+                localStorage.setItem('ball_tracker_pro_v4', JSON.stringify(newHistory));
+                alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว!");
+            };
+
+            const { profit: dayProfit, wr: dayWR } = calculateStats(matches, baseStake);
+
+            return (
+                <div className="max-w-md mx-auto p-4 pb-20">
+                    <header className="flex justify-between items-center my-6">
+                        <div>
+                            <h1 className="text-xl font-medium text-slate-800">BALL TRACKER <span className="text-blue-600 font-semibold">PRO</span></h1>
+                            <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase">Investment Management</p>
+                        </div>
+                        <div className="bg-blue-50 text-blue-600 text-[10px] px-3 py-1 rounded-full font-medium">CLOUD SYNC</div>
+                    </header>
+
+                    {/* Tabs Navigation */}
+                    <div className="flex border-b border-slate-200 mb-6 bg-white rounded-t-xl">
+                        <button onClick={() => setActiveTab('record')} className={`flex-1 py-3 text-sm transition-all ${activeTab === 'record' ? 'active-tab' : 'text-slate-400'}`}>บันทึกวันนี้</button>
+                        <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 text-sm transition-all ${activeTab === 'history' ? 'active-tab' : 'text-slate-400'}`}>ดูย้อนหลัง</button>
+                        <button onClick={() => setActiveTab('summary')} className={`flex-1 py-3 text-sm transition-all ${activeTab === 'summary' ? 'active-tab' : 'text-slate-400'}`}>สรุปยอด</button>
+                    </div>
+
+                    {}
+                    {activeTab === 'record' && (
+                        <div className="space-y-4 animate-in fade-in duration-300">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-slate-400 uppercase ml-1">เลือกวันที่</label>
+                                    <input type="date" value={currentDate} onChange={(e) => setCurrentDate(e.target.value)} className="w-full p-2.5 bg-white rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-slate-400 uppercase ml-1">ยอดแทง/คู่</label>
+                                    <input type="number" value={baseStake} onChange={(e) => setBaseStake(e.target.value)} className="w-full p-2.5 bg-white rounded-xl border border-slate-200 text-sm font-medium outline-none focus:border-blue-400" />
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                {matches.map((m, i) => (
+                                    <div key={m.id} className="card p-4 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <input 
+                                                value={m.name} 
+                                                onChange={(e) => {
+                                                    const newMatches = [...matches];
+                                                    newMatches[i].name = e.target.value;
+                                                    setMatches(newMatches);
+                                                }}
+                                                placeholder={`ชื่อคู่ที่ ${i+1}...`} 
+                                                className="text-sm font-medium outline-none w-full placeholder:text-slate-300" 
+                                            />
+                                            <button onClick={() => setMatches(matches.filter(x => x.id !== m.id))} className="text-slate-300 hover:text-red-400 transition-colors ml-2"><i className="fa-solid fa-circle-xmark"></i></button>
+                                        </div>
+                                        <div className="grid grid-cols-5 gap-1.5">
+                                            {[
+                                                { label: 'ชนะ', val: 'win', color: 'bg-green-500' },
+                                                { label: 'ชนะครึ่ง', val: 'winHalf', color: 'bg-green-400' },
+                                                { label: 'เสมอ', val: 'draw', color: 'bg-slate-400' },
+                                                { label: 'แพ้', val: 'loss', color: 'bg-red-500' },
+                                                { label: 'แพ้ครึ่ง', val: 'lossHalf', color: 'bg-red-400' }
+                                            ].map(btn => (
+                                                <button 
+                                                    key={btn.val}
+                                                    onClick={() => {
+                                                        const newMatches = [...matches];
+                                                        newMatches[i].status = btn.val;
+                                                        setMatches(newMatches);
+                                                    }}
+                                                    className={`py-2 text-[10px] rounded-lg transition-all ${m.status === btn.val ? btn.color + ' text-white shadow-sm' : 'bg-slate-50 text-slate-400 border border-slate-100 hover:bg-slate-100'}`}
+                                                >
+                                                    {btn.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button onClick={() => setMatches([...matches, { id: Date.now(), name: '', status: null }])} className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm hover:bg-white hover:border-blue-200 hover:text-blue-500 transition-all">+ เพิ่มคู่บอล</button>
+                            
+                            <div className="bg-slate-800 p-5 rounded-2xl text-white mt-6 shadow-lg shadow-slate-200">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs text-slate-400">กำไรวันนี้</span>
+                                    <span className={`text-xl font-medium ${dayProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{dayProfit >= 0 ? '+' : ''}{dayProfit.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between items-center border-t border-slate-700 pt-2 mt-2">
+                                    <span className="text-xs text-slate-400">วินเรทวันนี้</span>
+                                    <span className="text-lg font-medium">{dayWR.toFixed(1)}%</span>
+                                </div>
+                            </div>
+
+                            <button onClick={saveToLocal} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-medium shadow-lg shadow-blue-100 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                <i className="fa-solid fa-cloud-arrow-up text-sm"></i> บันทึกข้อมูล
+                            </button>
+                        </div>
+                    )}
+
+                    {}
+                    {activeTab === 'history' && (
+                        <div className="space-y-3 animate-in fade-in duration-300">
+                            {Object.keys(history).length === 0 ? (
+                                <div className="text-center py-20 text-slate-300">
+                                    <i className="fa-solid fa-folder-open text-4xl mb-3 block opacity-20"></i>
+                                    <p className="text-xs font-medium uppercase tracking-widest">ไม่มีข้อมูลประวัติ</p>
+                                </div>
+                            ) : (
+                                Object.keys(history).sort((a,b) => new Date(b) - new Date(a)).map(date => {
+                                    const day = history[date];
+                                    const { profit, wr, count } = calculateStats(day.matches, day.stake);
+                                    return (
+                                        <div key={date} className="card overflow-hidden">
+                                            <div className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setExpandedDate(expandedDate === date ? null : date)}>
+                                                <div>
+                                                    <p className="font-medium text-sm text-slate-700">{new Date(date).toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'2-digit'})}</p>
+                                                    <p className={`text-[10px] font-medium uppercase ${profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                        {count} คู่ • {profit >= 0 ? '+' : ''}{profit.toLocaleString()} บาท
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`px-2 py-1 rounded text-[10px] font-medium ${wr >= 50 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>WR {wr.toFixed(0)}%</div>
+                                                    <i className={`fa-solid fa-chevron-${expandedDate === date ? 'up' : 'down'} text-slate-300 text-[10px]`}></i>
+                                                </div>
+                                            </div>
+                                            {expandedDate === date && (
+                                                <div className="px-4 pb-4 bg-slate-50 border-t border-slate-100 space-y-1 pt-2">
+                                                    {day.matches.map((m, idx) => (
+                                                        <div key={idx} className="flex justify-between items-center text-[11px] py-1.5 border-b border-white last:border-0">
+                                                            <span className="text-slate-500">{m.name || 'ไม่ระบุชื่อ'}</span>
+                                                            <span className={`font-medium uppercase text-[9px] ${m.status?.includes('win') ? 'text-green-500' : m.status === 'draw' ? 'text-slate-400' : 'text-red-500'}`}>
+                                                                {m.status === 'win' ? 'ชนะ' : m.status === 'winHalf' ? 'ชนะครึ่ง' : m.status === 'draw' ? 'เสมอ' : m.status === 'loss' ? 'แพ้' : 'แพ้ครึ่ง'}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                    <button onClick={() => { setCurrentDate(date); setActiveTab('record'); }} className="w-full mt-3 py-2 bg-white border border-slate-200 text-blue-600 rounded-lg text-[10px] font-medium hover:bg-blue-50">แก้ไขข้อมูล</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })
+                            )}
+                        </div>
+                    )}
+
+                    {}
+                    {activeTab === 'summary' && (
+                        <div className="space-y-4 animate-in fade-in duration-300">
+                            <div className="grid grid-cols-1 gap-4">
+                                {[
+                                    { label: 'ย้อนหลัง 3 วัน', days: 3 },
+                                    { label: 'ย้อนหลัง 7 วัน', days: 7 },
+                                    { label: 'ย้อนหลัง 15 วัน', days: 15 },
+                                    { label: 'ย้อนหลัง 30 วัน', days: 30 }
+                                ].map(period => {
+                                    const stats = getPeriodStats(period.days);
+                                    return (
+                                        <div key={period.days} className="card p-5 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">{period.label}</p>
+                                                <p className={`text-xl font-medium ${stats.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                    {stats.profit >= 0 ? '+' : ''}{stats.profit.toLocaleString()}
+                                                </p>
+                                                <p className="text-[10px] text-slate-400 font-medium">ลงทุนรวม {stats.count} คู่</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] text-slate-400 uppercase mb-1">วินเรทเฉลี่ย</p>
+                                                <p className="text-xl font-medium text-blue-600">{stats.wr.toFixed(1)}%</p>
+                                                <div className="w-20 h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
+                                                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${stats.wr}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            
+                            <div className="p-6 text-center text-slate-400">
+                                <p className="text-[10px] font-medium uppercase tracking-widest">Everything is synced to your device storage</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
