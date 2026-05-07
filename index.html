@@ -3,328 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALL TRACKER PRO - Cloud</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>Ball Tracker Cloud Pro</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap');
-        
-        body { 
-            font-family: 'Kanit', sans-serif; 
-            background-color: #f8fafc;
-            color: #334155;
-            -webkit-font-smoothing: antialiased;
-        }
-        
-        .active-tab { 
-            position: relative; 
-            color: #2563eb; 
-            font-weight: 500;
-        }
-        .active-tab::after { 
-            content: ''; 
-            position: absolute; 
-            bottom: -2px; 
-            left: 20%; 
-            width: 60%; 
-            height: 3px; 
-            background: #2563eb; 
-            border-radius: 10px; 
-        }
-        
-        .card {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            border: 1px solid #e2e8f0;
-        }
-
-        input, button {
-            transition: all 0.2s ease;
-        }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        :root { --primary: #2563eb; --success: #22c55e; --danger: #ef4444; --slate: #64748b; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 500px; margin: 0 auto; padding-bottom: 80px; }
+        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px; border: 1px solid #e2e8f0; }
+        h2 { font-size: 1rem; font-weight: 600; margin: 0 0 15px 0; display: flex; align-items: center; gap: 8px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+        .stat-box { background: #f1f5f9; padding: 12px; border-radius: 12px; text-align: center; }
+        .stat-val { display: block; font-size: 1.25rem; font-weight: 600; }
+        .stat-lbl { font-size: 0.75rem; color: var(--slate); font-weight: 500; }
+        input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 0.9rem; margin-top: 5px; }
+        .match-item { padding: 15px; border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 10px; background: #fff; }
+        .btn-group { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 10px; }
+        button { cursor: pointer; border: none; border-radius: 8px; padding: 8px 4px; font-size: 0.7rem; font-weight: 500; transition: 0.2s; }
+        .btn-st { background: #f1f5f9; color: var(--slate); }
+        .btn-st.active[data-v="win"] { background: var(--success); color: white; }
+        .btn-st.active[data-v="winHalf"] { background: #86efac; color: #064e3b; }
+        .btn-st.active[data-v="draw"] { background: #cbd5e1; color: #1e293b; }
+        .btn-st.active[data-v="loss"] { background: var(--danger); color: white; }
+        .btn-st.active[data-v="lossHalf"] { background: #fca5a5; color: #7f1d1d; }
+        .btn-save { background: var(--primary); color: white; width: 100%; padding: 16px; font-size: 1rem; font-weight: 600; border-radius: 12px; margin-top: 10px; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
+        .btn-add { background: #1e293b; color: white; width: 100%; padding: 12px; margin-top: 10px; }
+        .tab-bar { display: flex; background: #e2e8f0; padding: 4px; border-radius: 12px; margin-bottom: 20px; }
+        .tab { flex: 1; padding: 10px; text-align: center; border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: var(--slate); }
+        .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .history-card { border-bottom: 1px solid #f1f5f9; padding: 12px 0; }
+        .sync-status { font-size: 0.7rem; text-align: center; margin-top: 10px; color: var(--success); font-weight: 600; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+<div class="container">
+    <div class="tab-bar">
+        <div class="tab active" onclick="switchTab('rec')">บันทึก</div>
+        <div class="tab" onclick="switchTab('his')">ย้อนหลัง</div>
+        <div class="tab" onclick="switchTab('sum')">สรุปยอด</div>
+    </div>
 
-        const STATUS_TYPES = {
-            WIN: 'win',
-            WIN_HALF: 'winHalf',
-            DRAW: 'draw',
-            LOSS: 'loss',
-            LOSS_HALF: 'lossHalf'
-        };
+    <div id="page-rec">
+        <div class="card">
+            <div class="stats-grid">
+                <div class="stat-box"><span class="stat-val" id="total-wr">0%</span><span class="stat-lbl">วินเรทรวม</span></div>
+                <div class="stat-box"><span class="stat-val" id="total-pf">0</span><span class="stat-lbl">กำไรรวม</span></div>
+            </div>
+        </div>
 
-        function App() {
-            const [activeTab, setActiveTab] = useState('record');
-            const [history, setHistory] = useState({});
-            const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
-            const [baseStake, setBaseStake] = useState(200);
-            const [matches, setMatches] = useState([]);
-            const [expandedDate, setExpandedDate] = useState(null);
+        <div class="card">
+            <h2>📅 ข้อมูลวันนี้</h2>
+            <input type="date" id="m-date">
+            <input type="number" id="m-stake" value="200" placeholder="ยอดลงทุนต่อคู่">
+            <div id="m-list" style="margin-top:15px"></div>
+            <button class="btn-add" onclick="addMatch()">+ เพิ่มคู่บอล</button>
+            <div id="sync-msg" class="sync-status">☁️ เชื่อมต่อระบบ Cloud แล้ว</div>
+            <button class="btn-save" onclick="saveToCloud()">💾 บันทึกขึ้น Cloud</button>
+        </div>
+    </div>
 
-            // โหลดข้อมูลจาก LocalStorage
-            useEffect(() => {
-                const saved = localStorage.getItem('ball_tracker_pro_v4');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    setHistory(parsed);
-                    if (parsed[currentDate]) {
-                        setMatches(parsed[currentDate].matches || []);
-                        setBaseStake(parsed[currentDate].stake || 200);
-                    }
-                }
-            }, [currentDate]);
+    <div id="page-his" style="display:none">
+        <div class="card" id="history-content">กำลังโหลดข้อมูล...</div>
+    </div>
 
-            const calculateStats = (matchesList, stake) => {
-                let profit = 0;
-                let wins = 0;
-                let countableMatches = 0;
+    <div id="page-sum" style="display:none">
+        <div class="card" id="summary-content"></div>
+    </div>
+</div>
 
-                matchesList.forEach(m => {
-                    const s = parseFloat(stake);
-                    if (!m.status) return;
-                    
-                    countableMatches++;
-                    if (m.status === STATUS_TYPES.WIN) { profit += (s * 0.8); wins++; }
-                    else if (m.status === STATUS_TYPES.WIN_HALF) { profit += (s * 0.4); wins++; }
-                    else if (m.status === STATUS_TYPES.DRAW) { profit += 0; }
-                    else if (m.status === STATUS_TYPES.LOSS) { profit -= s; }
-                    else if (m.status === STATUS_TYPES.LOSS_HALF) { profit -= (s / 2); }
-                });
+<script>
+    // --- 1. ตั้งค่า Firebase จากรูปที่คุณส่งมา ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyD1xQ1NvHeA8h8qTRUSlukunMFh_QvSucM",
+        authDomain: "my-football-tracker-5c99d.firebaseapp.com",
+        projectId: "my-football-tracker-5c99d",
+        storageBucket: "my-football-tracker-5c99d.appspot.com",
+        messagingSenderId: "23695228180",
+        appId: "1:23695228180:web:f2a1c38078343f34c09601"
+    };
 
-                const wr = countableMatches > 0 ? (wins / countableMatches) * 100 : 0;
-                return { profit, wr, count: countableMatches };
-            };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const docRef = db.collection("data").doc("user_main"); // บันทึกที่นี่ที่เดียว
 
-            const getPeriodStats = (days) => {
-                const now = new Date();
-                let totalProfit = 0;
-                let totalWins = 0;
-                let totalCountable = 0;
+    let history = {};
+    let matches = [];
+    document.getElementById('m-date').valueAsDate = new Date();
 
-                Object.keys(history).forEach(dateStr => {
-                    const recordDate = new Date(dateStr);
-                    const diffTime = Math.abs(now - recordDate);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                    if (diffDays <= days) {
-                        const day = history[dateStr];
-                        const stake = parseFloat(day.stake);
-                        day.matches.forEach(m => {
-                            if (!m.status) return;
-                            totalCountable++;
-                            if (m.status === STATUS_TYPES.WIN) { totalProfit += (stake * 0.8); totalWins++; }
-                            else if (m.status === STATUS_TYPES.WIN_HALF) { totalProfit += (stake * 0.4); totalWins++; }
-                            else if (m.status === STATUS_TYPES.DRAW) { totalProfit += 0; }
-                            else if (m.status === STATUS_TYPES.LOSS) { totalProfit -= stake; }
-                            else if (m.status === STATUS_TYPES.LOSS_HALF) { totalProfit -= (stake / 2); }
-                        });
-                    }
-                });
-
-                const wr = totalCountable > 0 ? (totalWins / totalCountable) * 100 : 0;
-                return { profit: totalProfit, wr, count: totalCountable };
-            };
-
-            const saveToLocal = () => {
-                if (matches.length === 0) return alert("กรุณาเพิ่มคู่บอลก่อนบันทึก");
-                const newHistory = { ...history, [currentDate]: { stake: baseStake, matches } };
-                setHistory(newHistory);
-                localStorage.setItem('ball_tracker_pro_v4', JSON.stringify(newHistory));
-                alert("✅ บันทึกข้อมูลเรียบร้อยแล้ว!");
-            };
-
-            const { profit: dayProfit, wr: dayWR } = calculateStats(matches, baseStake);
-
-            return (
-                <div className="max-w-md mx-auto p-4 pb-20">
-                    <header className="flex justify-between items-center my-6">
-                        <div>
-                            <h1 className="text-xl font-medium text-slate-800">BALL TRACKER <span className="text-blue-600 font-semibold">PRO</span></h1>
-                            <p className="text-[10px] text-slate-400 font-medium tracking-widest uppercase">Investment Management</p>
-                        </div>
-                        <div className="bg-blue-50 text-blue-600 text-[10px] px-3 py-1 rounded-full font-medium">CLOUD SYNC</div>
-                    </header>
-
-                    {/* Tabs Navigation */}
-                    <div className="flex border-b border-slate-200 mb-6 bg-white rounded-t-xl">
-                        <button onClick={() => setActiveTab('record')} className={`flex-1 py-3 text-sm transition-all ${activeTab === 'record' ? 'active-tab' : 'text-slate-400'}`}>บันทึกวันนี้</button>
-                        <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 text-sm transition-all ${activeTab === 'history' ? 'active-tab' : 'text-slate-400'}`}>ดูย้อนหลัง</button>
-                        <button onClick={() => setActiveTab('summary')} className={`flex-1 py-3 text-sm transition-all ${activeTab === 'summary' ? 'active-tab' : 'text-slate-400'}`}>สรุปยอด</button>
-                    </div>
-
-                    {}
-                    {activeTab === 'record' && (
-                        <div className="space-y-4 animate-in fade-in duration-300">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-medium text-slate-400 uppercase ml-1">เลือกวันที่</label>
-                                    <input type="date" value={currentDate} onChange={(e) => setCurrentDate(e.target.value)} className="w-full p-2.5 bg-white rounded-xl border border-slate-200 text-sm outline-none focus:border-blue-400" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-medium text-slate-400 uppercase ml-1">ยอดแทง/คู่</label>
-                                    <input type="number" value={baseStake} onChange={(e) => setBaseStake(e.target.value)} className="w-full p-2.5 bg-white rounded-xl border border-slate-200 text-sm font-medium outline-none focus:border-blue-400" />
-                                </div>
-                            </div>
-
-                            <div className="space-y-3">
-                                {matches.map((m, i) => (
-                                    <div key={m.id} className="card p-4 space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <input 
-                                                value={m.name} 
-                                                onChange={(e) => {
-                                                    const newMatches = [...matches];
-                                                    newMatches[i].name = e.target.value;
-                                                    setMatches(newMatches);
-                                                }}
-                                                placeholder={`ชื่อคู่ที่ ${i+1}...`} 
-                                                className="text-sm font-medium outline-none w-full placeholder:text-slate-300" 
-                                            />
-                                            <button onClick={() => setMatches(matches.filter(x => x.id !== m.id))} className="text-slate-300 hover:text-red-400 transition-colors ml-2"><i className="fa-solid fa-circle-xmark"></i></button>
-                                        </div>
-                                        <div className="grid grid-cols-5 gap-1.5">
-                                            {[
-                                                { label: 'ชนะ', val: 'win', color: 'bg-green-500' },
-                                                { label: 'ชนะครึ่ง', val: 'winHalf', color: 'bg-green-400' },
-                                                { label: 'เสมอ', val: 'draw', color: 'bg-slate-400' },
-                                                { label: 'แพ้', val: 'loss', color: 'bg-red-500' },
-                                                { label: 'แพ้ครึ่ง', val: 'lossHalf', color: 'bg-red-400' }
-                                            ].map(btn => (
-                                                <button 
-                                                    key={btn.val}
-                                                    onClick={() => {
-                                                        const newMatches = [...matches];
-                                                        newMatches[i].status = btn.val;
-                                                        setMatches(newMatches);
-                                                    }}
-                                                    className={`py-2 text-[10px] rounded-lg transition-all ${m.status === btn.val ? btn.color + ' text-white shadow-sm' : 'bg-slate-50 text-slate-400 border border-slate-100 hover:bg-slate-100'}`}
-                                                >
-                                                    {btn.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <button onClick={() => setMatches([...matches, { id: Date.now(), name: '', status: null }])} className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm hover:bg-white hover:border-blue-200 hover:text-blue-500 transition-all">+ เพิ่มคู่บอล</button>
-                            
-                            <div className="bg-slate-800 p-5 rounded-2xl text-white mt-6 shadow-lg shadow-slate-200">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-xs text-slate-400">กำไรวันนี้</span>
-                                    <span className={`text-xl font-medium ${dayProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{dayProfit >= 0 ? '+' : ''}{dayProfit.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between items-center border-t border-slate-700 pt-2 mt-2">
-                                    <span className="text-xs text-slate-400">วินเรทวันนี้</span>
-                                    <span className="text-lg font-medium">{dayWR.toFixed(1)}%</span>
-                                </div>
-                            </div>
-
-                            <button onClick={saveToLocal} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-medium shadow-lg shadow-blue-100 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                                <i className="fa-solid fa-cloud-arrow-up text-sm"></i> บันทึกข้อมูล
-                            </button>
-                        </div>
-                    )}
-
-                    {}
-                    {activeTab === 'history' && (
-                        <div className="space-y-3 animate-in fade-in duration-300">
-                            {Object.keys(history).length === 0 ? (
-                                <div className="text-center py-20 text-slate-300">
-                                    <i className="fa-solid fa-folder-open text-4xl mb-3 block opacity-20"></i>
-                                    <p className="text-xs font-medium uppercase tracking-widest">ไม่มีข้อมูลประวัติ</p>
-                                </div>
-                            ) : (
-                                Object.keys(history).sort((a,b) => new Date(b) - new Date(a)).map(date => {
-                                    const day = history[date];
-                                    const { profit, wr, count } = calculateStats(day.matches, day.stake);
-                                    return (
-                                        <div key={date} className="card overflow-hidden">
-                                            <div className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setExpandedDate(expandedDate === date ? null : date)}>
-                                                <div>
-                                                    <p className="font-medium text-sm text-slate-700">{new Date(date).toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'2-digit'})}</p>
-                                                    <p className={`text-[10px] font-medium uppercase ${profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                                        {count} คู่ • {profit >= 0 ? '+' : ''}{profit.toLocaleString()} บาท
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`px-2 py-1 rounded text-[10px] font-medium ${wr >= 50 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>WR {wr.toFixed(0)}%</div>
-                                                    <i className={`fa-solid fa-chevron-${expandedDate === date ? 'up' : 'down'} text-slate-300 text-[10px]`}></i>
-                                                </div>
-                                            </div>
-                                            {expandedDate === date && (
-                                                <div className="px-4 pb-4 bg-slate-50 border-t border-slate-100 space-y-1 pt-2">
-                                                    {day.matches.map((m, idx) => (
-                                                        <div key={idx} className="flex justify-between items-center text-[11px] py-1.5 border-b border-white last:border-0">
-                                                            <span className="text-slate-500">{m.name || 'ไม่ระบุชื่อ'}</span>
-                                                            <span className={`font-medium uppercase text-[9px] ${m.status?.includes('win') ? 'text-green-500' : m.status === 'draw' ? 'text-slate-400' : 'text-red-500'}`}>
-                                                                {m.status === 'win' ? 'ชนะ' : m.status === 'winHalf' ? 'ชนะครึ่ง' : m.status === 'draw' ? 'เสมอ' : m.status === 'loss' ? 'แพ้' : 'แพ้ครึ่ง'}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                    <button onClick={() => { setCurrentDate(date); setActiveTab('record'); }} className="w-full mt-3 py-2 bg-white border border-slate-200 text-blue-600 rounded-lg text-[10px] font-medium hover:bg-blue-50">แก้ไขข้อมูล</button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                })
-                            )}
-                        </div>
-                    )}
-
-                    {}
-                    {activeTab === 'summary' && (
-                        <div className="space-y-4 animate-in fade-in duration-300">
-                            <div className="grid grid-cols-1 gap-4">
-                                {[
-                                    { label: 'ย้อนหลัง 3 วัน', days: 3 },
-                                    { label: 'ย้อนหลัง 7 วัน', days: 7 },
-                                    { label: 'ย้อนหลัง 15 วัน', days: 15 },
-                                    { label: 'ย้อนหลัง 30 วัน', days: 30 }
-                                ].map(period => {
-                                    const stats = getPeriodStats(period.days);
-                                    return (
-                                        <div key={period.days} className="card p-5 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">{period.label}</p>
-                                                <p className={`text-xl font-medium ${stats.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                                    {stats.profit >= 0 ? '+' : ''}{stats.profit.toLocaleString()}
-                                                </p>
-                                                <p className="text-[10px] text-slate-400 font-medium">ลงทุนรวม {stats.count} คู่</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] text-slate-400 uppercase mb-1">วินเรทเฉลี่ย</p>
-                                                <p className="text-xl font-medium text-blue-600">{stats.wr.toFixed(1)}%</p>
-                                                <div className="w-20 h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                                                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${stats.wr}%` }}></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            
-                            <div className="p-6 text-center text-slate-400">
-                                <p className="text-[10px] font-medium uppercase tracking-widest">Everything is synced to your device storage</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
+    //โหลดข้อมูลทันทีที่เปิดเว็บ
+    async function init() {
+        const doc = await docRef.get();
+        if (doc.exists) {
+            history = doc.data().history || {};
+            updateGlobalStats();
+            loadDateData();
         }
+        renderSummary();
+    }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+    function addMatch(name = '', status = '') {
+        const id = Date.now();
+        matches.push({ id, name, status });
+        renderMatches();
+    }
+
+    function renderMatches() {
+        const list = document.getElementById('m-list');
+        list.innerHTML = '';
+        matches.forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'match-item';
+            div.innerHTML = `
+                <input type="text" placeholder="ชื่อคู่บอล" value="${m.name}" oninput="updateMatch(${m.id}, 'name', this.value)">
+                <div class="btn-group">
+                    ${['win','winHalf','draw','loss','lossHalf'].map(v => `
+                        <button class="btn-st ${m.status===v?'active':''}" data-v="${v}" onclick="updateMatch(${m.id},'status','${v}')">
+                            ${v==='win'?'ชนะ':v==='winHalf'?'ชนะครึ่ง':v==='draw'?'เสมอ':v==='loss'?'แพ้':'แพ้ครึ่ง'}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function updateMatch(id, key, val) {
+        const m = matches.find(i => i.id === id);
+        if(m) m[key] = val;
+        renderMatches();
+    }
+
+    async function saveToCloud() {
+        const date = document.getElementById('m-date').value;
+        const stake = document.getElementById('m-stake').value;
+        history[date] = { stake, matches };
+        
+        document.getElementById('sync-msg').innerText = "⏳ กำลังบันทึก...";
+        await docRef.set({ history });
+        document.getElementById('sync-msg').innerText = "✅ บันทึกขึ้น Cloud สำเร็จ!";
+        updateGlobalStats();
+        renderSummary();
+    }
+
+    function loadDateData() {
+        const date = document.getElementById('m-date').value;
+        if(history[date]) {
+            matches = history[date].matches;
+            document.getElementById('m-stake').value = history[date].stake;
+        } else {
+            matches = [];
+        }
+        renderMatches();
+    }
+
+    document.getElementById('m-date').onchange = loadDateData;
+
+    function calc(mList, stake) {
+        let p = 0, w = 0;
+        const s = parseFloat(stake);
+        mList.forEach(m => {
+            if(m.status==='win'){p+=s*0.8; w++;}
+            else if(m.status==='winHalf'){p+=s*0.4; w++;}
+            else if(m.status==='loss'){p-=s;}
+            else if(m.status==='lossHalf'){p-=s/2;}
+        });
+        return { p, w, total: mList.length };
+    }
+
+    function updateGlobalStats() {
+        let totalP = 0, totalW = 0, totalM = 0;
+        Object.values(history).forEach(d => {
+            const res = calc(d.matches, d.stake);
+            totalP += res.p; totalW += res.w; totalM += res.total;
+        });
+        document.getElementById('total-pf').innerText = totalP.toLocaleString();
+        document.getElementById('total-wr').innerText = totalM ? ((totalW/totalM)*100).toFixed(1)+'%' : '0%';
+    }
+
+    function switchTab(t) {
+        ['rec','his','sum'].forEach(p => document.getElementById('page-'+p).style.display = p===t?'block':'none');
+        document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', ['rec','his','sum'][i]===t));
+        if(t==='his') renderHistory();
+    }
+
+    function renderHistory() {
+        const cont = document.getElementById('history-content');
+        cont.innerHTML = '<h2>📜 ประวัติการลงทุน</h2>';
+        Object.keys(history).sort().reverse().forEach(d => {
+            const res = calc(history[d].matches, history[d].stake);
+            cont.innerHTML += `<div class="history-card">
+                <div style="font-weight:600">${d}</div>
+                <div style="font-size:0.8rem; color:var(--slate)">กำไร: ${res.p} | วินเรท: ${res.total?((res.w/res.total)*100).toFixed(0):0}%</div>
+            </div>`;
+        });
+    }
+
+    function renderSummary() {
+        const cont = document.getElementById('summary-content');
+        cont.innerHTML = '<h2>📊 สรุปยอดตามช่วงเวลา</h2>';
+        [3, 7, 15, 30].forEach(days => {
+            let p = 0, w = 0, m = 0;
+            const limit = new Date(); limit.setDate(limit.getDate() - days);
+            Object.keys(history).forEach(d => {
+                if(new Date(d) >= limit) {
+                    const res = calc(history[d].matches, history[d].stake);
+                    p += res.p; w += res.w; m += res.total;
+                }
+            });
+            cont.innerHTML += `<div class="stat-box" style="margin-bottom:10px">
+                <div class="stat-lbl">ย้อนหลัง ${days} วัน</div>
+                <div class="stat-val" style="color:${p>=0?'var(--success)':'var(--danger)'}">${p.toLocaleString()} บาท</div>
+                <div class="stat-lbl">วินเรท: ${m?((w/m)*100).toFixed(1):0}%</div>
+            </div>`;
+        });
+    }
+
+    init();
+</script>
 </body>
 </html>
