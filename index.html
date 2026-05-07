@@ -122,7 +122,7 @@
                 <div class="btn-group">
                     ${['win','winHalf','draw','loss','lossHalf'].map(v => `
                         <button class="btn-st ${m.status===v?'active':''}" data-v="${v}" onclick="updateMatchStatus(${m.id},'${v}')">
-                            ${v==='win'?'ชนะ':v==='winHalf'?'ชนะ':v==='draw'?'เสมอ':v==='loss'?'แพ้':'แพ้'}
+                            ${v==='win'?'ชนะ':v==='winHalf'?'ชนะครึ่ง':v==='draw'?'เสมอ':v==='loss'?'แพ้':'แพ้ครึ่ง'}
                         </button>
                     `).join('')}
                 </div>
